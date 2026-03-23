@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Transly AI</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a18;min-height:100vh;padding:1.5rem}
+.app{max-width:820px;margin:0 auto}
+.topbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.topbar h2{font-size:17px;font-weight:500;flex:1;min-width:120px}
+.tab-row{display:flex;gap:4px;background:#e8e7e0;border-radius:8px;padding:3px}
+.tab{padding:5px 12px;font-size:12px;border:none;background:none;border-radius:6px;cursor:pointer;color:#5f5e5a;font-weight:500;transition:background .15s,color .15s}
+.tab.active{background:#fff;color:#1a1a18;border:0.5px solid rgba(0,0,0,.12)}
+.panel{display:none}.panel.active{display:block}
+.section{background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.section-title{font-size:12px;font-weight:500;color:#5f5e5a;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.section-title .pill{font-size:10px;padding:2px 7px;border-radius:20px;background:#E1F5EE;color:#085041;font-weight:400}
+.section-title .pill.notion{background:#EEEDFE;color:#3C3489}
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}
+.cfg-group label{font-size:11px;color:#5f5e5a;display:block;margin-bottom:4px}
+select,input[type=password],input[type=text]{width:100%;padding:7px 9px;font-size:13px;border-radius:8px;background:#f5f5f0;color:#1a1a18;border:0.5px solid rgba(0,0,0,.2);outline:none}
+select:focus,input:focus{box-shadow:0 0 0 2px rgba(15,110,86,.25);background:#fff}
+.notion-status{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:#888}
+.ndot{width:6px;height:6px;border-radius:50%;background:#ccc;flex-shrink:0}
+.ndot.ok{background:#1D9E75}.ndot.err{background:#E24B4A}.ndot.busy{background:#EF9F27}
+.sbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#e8e7e0;border-radius:8px;margin-bottom:10px;border:0.5px solid rgba(0,0,0,.1)}
+.dot{width:7px;height:7px;border-radius:50%;background:#aaa;flex-shrink:0;transition:background .3s}
+.dot.on{background:#1D9E75;animation:pulse 1.5s infinite}
+.dot.busy{background:#EF9F27}
+.dot.err{background:#E24B4A}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#stext{font-size:12px;color:#5f5e5a;flex:1}
+.brow{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.btn{padding:7px 14px;font-size:13px;border-radius:8px;cursor:pointer;border:0.5px solid rgba(0,0,0,.2);background:#fff;color:#1a1a18;font-weight:500;transition:background .15s,transform .1s;white-space:nowrap}
+.btn:hover{background:#e8e7e0}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.go{background:#0F6E56;color:#E1F5EE;border-color:#0F6E56}.btn.go:hover{background:#085041}
+.btn.stop{background:#993C1D;color:#FAECE7;border-color:#993C1D}.btn.stop:hover{background:#712B13}
+.btn.notion-btn{background:#534AB7;color:#EEEDFE;border-color:#534AB7}.btn.notion-btn:hover{background:#3C3489}
+.btn.sm{padding:4px 10px;font-size:11px}
+.interim{font-size:13px;color:#888;padding:9px 12px;border:0.5px dashed rgba(0,0,0,.15);border-radius:8px;min-height:38px;line-height:1.5;margin-bottom:10px;font-style:italic;background:#fff}
+.feed{display:flex;flex-direction:column;gap:8px}
+.seg{background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:12px;padding:12px 14px;animation:fi .25s ease}
+@keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.seg-meta{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;background:#E1F5EE;color:#085041}
+.badge.ts{background:#EEEDFE;color:#3C3489}
+.badge.notion-ok{background:#E1F5EE;color:#085041}
+.badge.notion-err{background:#FCEBEB;color:#791F1F}
+.seg-time{font-size:10px;color:#aaa;margin-left:auto}
+.orig{font-size:12px;color:#888;margin-bottom:5px;border-left:2px solid #ddd;padding-left:8px}
+.trans-wrap{display:flex;align-items:flex-start;gap:8px}
+.trans{font-size:14px;color:#1a1a18;line-height:1.6;flex:1}
+.copy-btn{flex-shrink:0;padding:4px 8px;font-size:11px;border-radius:6px;cursor:pointer;border:0.5px solid rgba(0,0,0,.18);background:#f5f5f0;color:#5f5e5a;font-weight:500;transition:background .15s,color .15s,transform .1s;margin-top:2px;white-space:nowrap}
+.copy-btn:hover{background:#e8e7e0;color:#1a1a18}
+.copy-btn:active{transform:scale(.95)}
+.copy-btn.copied{background:#E1F5EE;color:#085041;border-color:#5DCAA5}
+.orig-wrap{display:flex;align-items:flex-start;gap:8px}
+.orig-wrap .orig{flex:1;margin-bottom:0}
+.copy-btn.sm{padding:3px 7px;font-size:10px}
+.empty{text-align:center;padding:2.5rem 1rem;color:#aaa;font-size:13px;border:0.5px dashed rgba(0,0,0,.15);border-radius:12px;background:#fff}
+.hist-item{background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.hist-head{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.hist-date{font-size:10px;color:#aaa}
+.hist-orig{font-size:11px;color:#888;margin-bottom:3px}
+.hist-trans{font-size:13px;color:#1a1a18}
+.compact-wrap{background:#e8e7e0;border-radius:12px;padding:1rem;border:0.5px solid rgba(0,0,0,.1)}
+.compact-inner{background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:12px;overflow:hidden}
+.compact-hdr{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:0.5px solid rgba(0,0,0,.08);background:#f5f5f0}
+.compact-hdr span{font-size:12px;font-weight:500;flex:1}
+.cdot{width:6px;height:6px;border-radius:50%;background:#aaa}
+.cdot.on{background:#1D9E75;animation:pulse 1.5s infinite}
+.compact-body{padding:10px 12px;min-height:80px;max-height:200px;overflow-y:auto}
+.compact-line{font-size:13px;color:#1a1a18;line-height:1.6;padding:5px 0;border-bottom:0.5px solid rgba(0,0,0,.07)}
+.compact-line:last-child{border-bottom:none}
+.compact-line .csrc{font-size:10px;color:#aaa;display:block;margin-bottom:1px}
+.compact-footer{display:flex;gap:6px;padding:8px 12px;border-top:0.5px solid rgba(0,0,0,.08);background:#f5f5f0}
+.note{font-size:11px;color:#888;margin-top:8px}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
+.stat{background:#fff;border-radius:8px;padding:10px;text-align:center;border:0.5px solid rgba(0,0,0,.08)}
+.stat-n{font-size:22px;font-weight:500}
+.stat-l{font-size:11px;color:#888;margin-top:2px}
+.proxy-note{font-size:11px;color:#888;background:#fffbe6;border:0.5px solid #EF9F27;border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.5}
+.save-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:#5f5e5a;margin-top:8px;cursor:pointer}
+.save-toggle input{width:auto;margin:0}
+@media(prefers-color-scheme:dark){
+  body{background:#1a1a18;color:#f0efe8}
+  .tab-row,.sbar,.compact-wrap,.compact-hdr,.compact-footer{background:#2c2c2a}
+  .tab.active,.btn,.seg,.hist-item,.stat,.interim,.compact-inner,.empty,.section{background:#222220;border-color:rgba(255,255,255,.1)}
+  select,input[type=password],input[type=text]{background:#2c2c2a;color:#f0efe8;border-color:rgba(255,255,255,.2)}
+  select:focus,input:focus{background:#333}
+  .tab,.orig,#stext{color:#aaa}
+  .tab.active,.compact-hdr span,.save-toggle{color:#f0efe8}
+  .compact-body{background:#222220}
+  .compact-line{color:#f0efe8;border-color:rgba(255,255,255,.07)}
+  .copy-btn{background:#2c2c2a;color:#aaa;border-color:rgba(255,255,255,.15)}
+  .copy-btn:hover{background:#3a3a38;color:#f0efe8}
+  .copy-btn.copied{background:#085041;color:#9FE1CB;border-color:#1D9E75}
+  .hist-trans{color:#f0efe8}
+  .proxy-note{background:#2c2a1a;border-color:#854F0B;color:#FAC775}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <h2>Transly AI</h2>
+    <div class="tab-row">
+      <button class="tab active" onclick="switchTab('live')">En vivo</button>
+      <button class="tab" onclick="switchTab('compact')">Flotante</button>
+      <button class="tab" onclick="switchTab('history')">Historial</button>
+      <button class="tab" onclick="switchTab('config')">Configurar</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Anthropic <span class="pill">requerido</span></div>
+    <div class="cfg-grid">
+      <div class="cfg-group">
+        <label>API Key de Anthropic</label>
+        <div style="display:flex;gap:6px;align-items:center"><input type="text" id="api-key" placeholder="sk-ant-..." oninput="saveConfig()" autocomplete="off" spellcheck="false" style="-webkit-text-security:disc;font-family:monospace;font-size:13px;flex:1;padding:7px 9px;border-radius:8px;background:#f5f5f0;color:#1a1a18;border:0.5px solid rgba(0,0,0,.2);outline:none" /><span id="api-saved" style="font-size:11px;color:#1D9E75;white-space:nowrap;opacity:0;transition:opacity .4s">guardada</span></div>
+      </div>
+      <div class="cfg-group">
+        <label>Idioma origen</label>
+        <select id="src-lang" onchange="saveConfig();updateCLang()">
+          <option value="auto">Detectar automáticamente</option>
+          <option value="English" selected>Inglés</option>
+          <option value="Spanish">Español</option>
+          <option value="French">Francés</option>
+          <option value="German">Alemán</option>
+          <option value="Portuguese">Portugués</option>
+          <option value="Italian">Italiano</option>
+          <option value="Japanese">Japonés</option>
+          <option value="Chinese">Chino</option>
+          <option value="Korean">Coreano</option>
+          <option value="Russian">Ruso</option>
+          <option value="Arabic">Árabe</option>
+        </select>
+      </div>
+      <div class="cfg-group">
+        <label>Idioma destino</label>
+        <select id="dst-lang" onchange="saveConfig();updateCLang()">
+          <option value="Spanish" selected>Español</option>
+          <option value="English">Inglés</option>
+          <option value="French">Francés</option>
+          <option value="German">Alemán</option>
+          <option value="Portuguese">Portugués</option>
+          <option value="Italian">Italiano</option>
+          <option value="Japanese">Japonés</option>
+          <option value="Chinese">Chino</option>
+          <option value="Korean">Coreano</option>
+        </select>
+      </div>
+      <div class="cfg-group">
+        <label>Modo</label>
+        <select id="mode-sel" onchange="saveConfig()">
+          <option value="translate">Traducir</option>
+          <option value="transcribe">Solo transcribir</option>
+          <option value="both">Transcribir + traducir</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Notion <span class="pill notion">opcional</span></div>
+    <div class="cfg-grid">
+      <div class="cfg-group">
+        <label>Integration Token de Notion</label>
+        <input type="password" id="notion-token" placeholder="secret_..." oninput="saveConfig()" />
+      </div>
+      <div class="cfg-group">
+        <label>ID de la base de datos</label>
+        <input type="text" id="notion-db" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" oninput="saveConfig()" />
+      </div>
+      <div class="cfg-group">
+        <label>Guardar en Notion</label>
+        <select id="notion-save-mode" onchange="saveConfig()">
+          <option value="each">Cada segmento traducido</option>
+          <option value="session">Al terminar la sesión</option>
+          <option value="manual">Solo manualmente</option>
+        </select>
+      </div>
+      <div class="cfg-group" style="display:flex;align-items:flex-end">
+        <button class="btn notion-btn" onclick="testNotion()" style="width:100%">Probar conexión</button>
+      </div>
+    </div>
+    <div class="notion-status"><div class="ndot" id="ndot"></div><span id="nstatus">Sin configurar.</span></div>
+    <div class="proxy-note">Notion requiere un proxy CORS para funcionar desde archivos locales. Usa <strong>make.com</strong> o <strong>n8n</strong> como intermediario, o activa un proxy local. Ver pestaña "Configurar" para instrucciones.</div>
+  </div>
+
+  <div class="sbar">
+    <div class="dot" id="sdot"></div>
+    <span id="stext">Listo. Presiona Iniciar para activar el micrófono.</span>
+  </div>
+
+  <div class="brow">
+    <button class="btn go" id="btn-start" onclick="startL()">Iniciar</button>
+    <button class="btn stop" id="btn-stop" onclick="stopL()" disabled>Detener y guardar en Notion</button>
+    <button class="btn notion-btn" onclick="saveSessionToNotion()">Guardar sesión en Notion</button>
+    <button class="btn" onclick="clearFeed()">Limpiar vista</button>
+    <button class="btn" onclick="exportHistory()">Exportar .txt</button>
+  </div>
+
+  <div class="panel active" id="panel-live">
+    <div class="interim" id="interim">El texto reconocido aparece aquí en tiempo real...</div>
+    <div class="feed" id="feed">
+      <div class="empty" id="emp">Las traducciones y transcripciones aparecerán aquí.</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-compact">
+    <div class="compact-wrap">
+      <p style="font-size:12px;color:#888;margin-bottom:10px;">Vista compacta — pon esta ventana encima de Skool, YouTube, Zoom, etc.</p>
+      <div class="compact-inner">
+        <div class="compact-hdr">
+          <div class="cdot" id="cdot"></div>
+          <span id="clang">EN → ES</span>
+          <button class="btn sm" onclick="startL()">Iniciar</button>
+          <button class="btn sm" onclick="stopL()">Parar</button>
+          <button class="btn sm notion-btn" onclick="saveSessionToNotion()">→ Notion</button>
+        </div>
+        <div class="compact-body" id="compact-feed">
+          <div style="font-size:12px;color:#aaa;padding:1rem;text-align:center;">Las traducciones aparecerán aquí.</div>
+        </div>
+        <div class="compact-footer">
+          <div class="interim" style="flex:1;margin:0;min-height:28px;font-size:12px;padding:5px 8px" id="cinterim">...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-history">
+    <div class="stats-row">
+      <div class="stat"><div class="stat-n" id="st-total">0</div><div class="stat-l">segmentos totales</div></div>
+      <div class="stat"><div class="stat-n" id="st-words">0</div><div class="stat-l">palabras guardadas</div></div>
+      <div class="stat"><div class="stat-n" id="st-notion">0</div><div class="stat-l">enviados a Notion</div></div>
+    </div>
+    <div class="brow" style="margin-bottom:10px">
+      <input type="text" id="search-hist" placeholder="Buscar en historial..." style="flex:1" oninput="renderHistory()" />
+      <button class="btn notion-btn" onclick="saveAllToNotion()">Exportar todo a Notion</button>
+      <button class="btn" onclick="clearHistory()">Borrar historial</button>
+    </div>
+    <div id="hist-list"><div class="empty">El historial aparece aquí.</div></div>
+  </div>
+
+  <div class="panel" id="panel-config">
+    <div class="section">
+      <div class="section-title">Cómo conectar Notion (paso a paso)</div>
+      <div style="font-size:13px;color:#5f5e5a;line-height:1.8">
+        <p style="margin-bottom:8px"><strong>1. Crear la integración en Notion:</strong><br>
+        Ve a <a href="https://www.notion.so/my-integrations" target="_blank" style="color:#534AB7">notion.so/my-integrations</a> → "New integration" → ponle nombre (ej: "Traductor") → copia el <em>Internal Integration Token</em> (empieza con <code>secret_</code>).</p>
+        <p style="margin-bottom:8px"><strong>2. Conectar a tu base de datos:</strong><br>
+        Abre la base de datos en Notion → clic en los tres puntos <code>...</code> → "Connect to" → selecciona tu integración. La base de datos necesita al menos estas propiedades: <code>Name</code> (título), <code>Traducción</code> (texto), <code>Idioma</code> (texto), <code>Fecha</code> (fecha).</p>
+        <p style="margin-bottom:8px"><strong>3. Copiar el ID de la base de datos:</strong><br>
+        La URL de tu base de datos es así:<br>
+        <code style="font-size:11px;word-break:break-all">https://www.notion.so/<strong>TU_ID_AQUI</strong>?v=...</code><br>
+        Copia solo la parte en negrita (32 caracteres).</p>
+        <p style="margin-bottom:8px"><strong>4. Proxy CORS (necesario para archivos locales):</strong><br>
+        Notion bloquea solicitudes directas desde archivos HTML. Necesitas un intermediario. La opción más fácil es Make.com:</p>
+        <ol style="margin-left:20px;margin-bottom:8px;line-height:2">
+          <li>Crea una cuenta gratis en <a href="https://make.com" target="_blank" style="color:#534AB7">make.com</a></li>
+          <li>Crea un escenario con el trigger "Webhooks → Custom webhook"</li>
+          <li>Agrega el módulo "Notion → Create a database item"</li>
+          <li>Copia la URL del webhook y pégala abajo</li>
+        </ol>
+        <div class="cfg-group" style="margin-bottom:8px">
+          <label>URL del webhook (Make.com, n8n, u otro proxy)</label>
+          <input type="text" id="proxy-url" placeholder="https://hook.make.com/..." oninput="saveConfig()" />
+        </div>
+        <p style="font-size:11px;color:#888">Alternativa sin proxy: sube este archivo HTML a un servidor web (GitHub Pages, Netlify) — desde HTTPS la API de Notion funciona directamente.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let recog=null,listening=false,pending='',timer=null;
+let history=JSON.parse(localStorage.getItem('tl_hist2')||'[]');
+let sessionSegments=[];
+let notionSentCount=parseInt(localStorage.getItem('tl_notion_count')||'0');
+
+function loadConfig(){
+  const c=JSON.parse(localStorage.getItem('tl_config')||'{}');
+  if(c.apiKey)document.getElementById('api-key').value=c.apiKey;
+  if(c.notionToken)document.getElementById('notion-token').value=c.notionToken;
+  if(c.notionDb)document.getElementById('notion-db').value=c.notionDb;
+  if(c.proxyUrl)document.getElementById('proxy-url').value=c.proxyUrl;
+  if(c.srcLang)document.getElementById('src-lang').value=c.srcLang;
+  if(c.dstLang)document.getElementById('dst-lang').value=c.dstLang;
+  if(c.mode)document.getElementById('mode-sel').value=c.mode;
+  if(c.notionSaveMode)document.getElementById('notion-save-mode').value=c.notionSaveMode;
+}
+
+function saveConfig(){var ind=document.getElementById("api-saved");if(ind){ind.style.opacity="1";clearTimeout(window._saveT);window._saveT=setTimeout(function(){ind.style.opacity="0";},2000);}
+  localStorage.setItem('tl_config',JSON.stringify({
+    apiKey:document.getElementById('api-key').value,
+    notionToken:document.getElementById('notion-token').value,
+    notionDb:document.getElementById('notion-db').value,
+    proxyUrl:document.getElementById('proxy-url')?.value||'',
+    srcLang:document.getElementById('src-lang').value,
+    dstLang:document.getElementById('dst-lang').value,
+    mode:document.getElementById('mode-sel').value,
+    notionSaveMode:document.getElementById('notion-save-mode').value
+  }));
+}
+
+function switchTab(t){
+  const tabs=['live','compact','history','config'];
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',tabs[i]===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+  if(t==='history')renderHistory();
+}
+
+function setStatus(type,msg){
+  document.getElementById('sdot').className='dot '+(type||'');
+  document.getElementById('stext').textContent=msg;
+  document.getElementById('cdot').className='cdot '+(type==='on'?'on':'');
+}
+
+function getLang(){
+  const m={English:'en-US',Spanish:'es-ES',French:'fr-FR',German:'de-DE',Portuguese:'pt-BR',Italian:'it-IT',Japanese:'ja-JP',Chinese:'zh-CN',Korean:'ko-KR',Russian:'ru-RU',Arabic:'ar-SA'};
+  return m[document.getElementById('src-lang').value]||'en-US';
+}
+
+function startL(){
+  const key=document.getElementById('api-key').value.trim();
+  if(!key){setStatus('err','Ingresa tu API Key de Anthropic primero.');return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setStatus('err','Usa Chrome o Edge para el reconocimiento de voz.');return;}
+  sessionSegments=[];
+  recog=new SR();
+  recog.continuous=true;recog.interimResults=true;recog.lang=getLang();
+  recog.onstart=()=>{listening=true;setStatus('on','Escuchando...');document.getElementById('btn-start').disabled=true;document.getElementById('btn-stop').disabled=false;updateCLang();};
+  recog.onresult=(e)=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}
+    const it=interim||'Escuchando...';
+    document.getElementById('interim').textContent=it;
+    document.getElementById('cinterim').textContent=it;
+    if(final.trim()){pending+=final;clearTimeout(timer);timer=setTimeout(()=>{process(pending.trim());pending='';},900);}
+  };
+  recog.onerror=(e)=>{
+    if(e.error==='not-allowed')setStatus('err','Micrófono bloqueado. Haz clic en el candado de la URL y permite el micrófono.');
+    else if(e.error!=='no-speech')setStatus('err','Error: '+e.error);
+  };
+  recog.onend=()=>{if(listening)recog.start();};
+  recog.start();
+}
+
+function stopL(){
+  listening=false;if(recog){recog.stop();recog=null;}
+  setStatus('','Sesión terminada.');
+  document.getElementById('btn-start').disabled=false;
+  document.getElementById('btn-stop').disabled=true;
+  document.getElementById('interim').textContent='El texto reconocido aparece aquí en tiempo real...';
+  document.getElementById('cinterim').textContent='...';
+  const saveMode=document.getElementById('notion-save-mode').value;
+  if(saveMode==='session'&&sessionSegments.length)saveSessionToNotion();
+}
+
+function updateCLang(){
+  const s=document.getElementById('src-lang').value;
+  const d=document.getElementById('dst-lang').value;
+  document.getElementById('clang').textContent=(s==='auto'?'Auto':s.slice(0,2).toUpperCase())+' → '+d.slice(0,2).toUpperCase();
+}
+
+async function process(text){
+  if(!text)return;
+  const key=document.getElementById('api-key').value.trim();
+  const src=document.getElementById('src-lang').value;
+  const dst=document.getElementById('dst-lang').value;
+  const mode=document.getElementById('mode-sel').value;
+  const ts=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  const dateISO=new Date().toISOString().slice(0,10);
+  document.getElementById('emp')?.remove();
+
+  if(mode==='transcribe'){
+    addSegment(text,text,src,dst,ts,true,false,null);
+    const seg={orig:text,trans:text,src,dst,ts,date:dateISO,isScript:true,notionSent:false};
+    saveHistory(seg);sessionSegments.push(seg);
+    return;
+  }
+
+  const prompt=`Translate the following ${src==='auto'?'':src+' '}text to ${dst}. Reply with ONLY the translation:\n\n${text}`;
+  const id='s'+Date.now();
+  addSegment(text,'Traduciendo...',src,dst,ts,mode==='both',true,id);
+  setStatus('busy','Traduciendo...');
+
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await r.json();
+    const tr=data.content?.[0]?.text||'Error al traducir.';
+    const el=document.getElementById('tr-'+id);
+    if(el){
+      el.textContent=tr;
+      const btn=el.nextElementSibling;
+      if(btn&&btn.classList.contains('copy-btn'))btn.setAttribute('data-src',tr);
+    }
+    addCompactLine(text,tr);
+
+    const seg={orig:text,trans:tr,src,dst,ts,date:dateISO,isScript:false,notionSent:false};
+    saveHistory(seg);
+    sessionSegments.push(seg);
+    setStatus('on',listening?'Escuchando...':'Listo.');
+
+    const saveMode=document.getElementById('notion-save-mode').value;
+    if(saveMode==='each'){
+      const ok=await sendToNotion(seg);
+      updateNotionBadge(id,ok);
+      if(ok){seg.notionSent=true;updateStats();}
+    }
+  }catch(e){
+    const el=document.getElementById('tr-'+id);
+    if(el)el.textContent='Error: '+e.message;
+    setStatus('err','Error de conexión.');
+  }
+}
+
+async function sendToNotion(seg){
+  const token=document.getElementById('notion-token').value.trim();
+  const dbId=document.getElementById('notion-db').value.trim().replace(/-/g,'');
+  const proxyUrl=document.getElementById('proxy-url')?.value?.trim()||'';
+
+  if(!token||!dbId)return false;
+
+  const payload={
+    parent:{database_id:dbId},
+    properties:{
+      Name:{title:[{text:{content:seg.orig.slice(0,100)}}]},
+      Traducción:{rich_text:[{text:{content:seg.trans}}]},
+      Original:{rich_text:[{text:{content:seg.orig}}]},
+      Idioma:{rich_text:[{text:{content:(seg.src||'?')+' → '+(seg.dst||'?')}}]},
+      Fecha:{date:{start:seg.date}},
+      Hora:{rich_text:[{text:{content:seg.ts}}]}
+    }
+  };
+
+  try{
+    let r;
+    if(proxyUrl){
+      r=await fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notionToken:token,dbId,payload})});
+    } else {
+      r=await fetch('https://api.notion.com/v1/pages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'Notion-Version':'2022-06-28'},
+        body:JSON.stringify(payload)
+      });
+    }
+    if(r.ok){notionSentCount++;localStorage.setItem('tl_notion_count',notionSentCount);return true;}
+    return false;
+  }catch(e){return false;}
+}
+
+function updateNotionBadge(segId,ok){
+  const seg=document.getElementById('tr-'+segId)?.closest('.seg');
+  if(!seg)return;
+  const badge=document.createElement('span');
+  badge.className='badge '+(ok?'notion-ok':'notion-err');
+  badge.textContent=ok?'guardado en Notion':'no se pudo guardar';
+  seg.querySelector('.seg-meta').appendChild(badge);
+}
+
+async function saveSessionToNotion(){
+  const unsent=sessionSegments.filter(s=>!s.notionSent);
+  if(!unsent.length){alert('No hay segmentos nuevos para guardar en Notion.');return;}
+  setStatus('busy','Guardando en Notion...');
+  let ok=0;
+  for(const seg of unsent){
+    const sent=await sendToNotion(seg);
+    if(sent){seg.notionSent=true;ok++;}
+  }
+  setStatus('','Guardados '+ok+' de '+unsent.length+' segmentos en Notion.');
+  updateStats();
+  renderHistory();
+}
+
+async function saveAllToNotion(){
+  if(!history.length){alert('No hay historial para exportar.');return;}
+  const unsent=history.filter(h=>!h.notionSent);
+  if(!unsent.length){alert('Todo el historial ya está en Notion.');return;}
+  setStatus('busy','Guardando historial en Notion...');
+  let ok=0;
+  for(const seg of unsent){
+    const sent=await sendToNotion(seg);
+    if(sent){seg.notionSent=true;ok++;}
+  }
+  localStorage.setItem('tl_hist2',JSON.stringify(history));
+  setStatus('','Guardados '+ok+' registros en Notion.');
+  updateStats();renderHistory();
+}
+
+async function testNotion(){
+  const token=document.getElementById('notion-token').value.trim();
+  const dbId=document.getElementById('notion-db').value.trim();
+  const proxyUrl=document.getElementById('proxy-url')?.value?.trim()||'';
+  if(!token||!dbId){setNotionStatus('err','Completa el token y el ID de base de datos.');return;}
+  setNotionStatus('busy','Probando conexión...');
+  const testSeg={orig:'Prueba de conexión desde el Traductor',trans:'Connection test from Translator',src:'Spanish',dst:'English',date:new Date().toISOString().slice(0,10),ts:new Date().toLocaleTimeString(),isScript:false};
+  const ok=await sendToNotion(testSeg);
+  if(ok)setNotionStatus('ok','Conexión exitosa. Se creó una entrada de prueba en tu base de datos.');
+  else setNotionStatus('err','No se pudo conectar. Verifica el token, el ID y que la integración esté conectada a la base de datos.');
+}
+
+function setNotionStatus(type,msg){
+  document.getElementById('ndot').className='ndot '+(type||'');
+  document.getElementById('nstatus').textContent=msg;
+}
+
+function addSegment(orig,trans,src,dst,ts,showOrig,showBadge,id){
+  const div=document.createElement('div');div.className='seg';
+  const mode=document.getElementById('mode-sel').value;
+  const bLabel=mode==='transcribe'?'transcripción':mode==='both'?'transcripción + traducción':'traducción';
+  const bCls=mode==='transcribe'?'badge ts':'badge';
+  const origHtml=showOrig&&orig
+    ?`<div class="orig-wrap" style="margin-bottom:5px"><div class="orig" style="margin-bottom:0">${esc(orig)}</div><button class="copy-btn sm" onclick="copyText(this,'${id}-orig')">copiar</button></div>`
+    :'';
+  const transHtml=mode==='transcribe'
+    ?`<div class="trans-wrap"><div class="trans" id="tr-${id}">${esc(orig)}</div><button class="copy-btn" onclick="copyText(this,'${id}-tr')">copiar</button></div>`
+    :`<div class="trans-wrap"><div class="trans" id="tr-${id}">${esc(trans)}</div><button class="copy-btn" onclick="copyText(this,'${id}-tr')">copiar</button></div>`;
+  div.innerHTML=`<div class="seg-meta"><span class="${bCls}">${bLabel}</span><span class="seg-time">${ts}</span></div>${origHtml}${transHtml}`;
+  div.querySelector('[onclick*="-orig"]')?.setAttribute('data-src',orig);
+  div.querySelector('[onclick*="-tr"]')?.setAttribute('data-src',mode==='transcribe'?orig:trans);
+  document.getElementById('feed').prepend(div);
+}
+
+function addCompactLine(orig,trans){
+  const cf=document.getElementById('compact-feed');
+  const ph=cf.querySelector('div');if(ph&&!ph.className)ph.remove();
+  const d=document.createElement('div');d.className='compact-line';
+  d.innerHTML=`<span class="csrc">${esc(orig)}</span>${esc(trans)}`;
+  cf.prepend(d);
+  if(cf.children.length>20)cf.lastChild.remove();
+}
+
+function saveHistory(seg){
+  history.unshift(seg);
+  if(history.length>500)history.pop();
+  localStorage.setItem('tl_hist2',JSON.stringify(history));
+}
+
+function renderHistory(){
+  const q=(document.getElementById('search-hist').value||'').toLowerCase();
+  const filtered=q?history.filter(h=>h.orig.toLowerCase().includes(q)||h.trans.toLowerCase().includes(q)):history;
+  updateStats();
+  const el=document.getElementById('hist-list');
+  if(!filtered.length){el.innerHTML='<div class="empty">No hay resultados.</div>';return;}
+  el.innerHTML=filtered.slice(0,100).map((h,i)=>`
+    <div class="hist-item">
+      <div class="hist-head">
+        <span class="badge ${h.isScript?'ts':''}">${h.isScript?'transcripción':'traducción'}</span>
+        ${h.notionSent?'<span class="badge notion-ok">en Notion</span>':''}
+        <span class="hist-date">${h.date} ${h.ts} &middot; ${h.src||'?'} → ${h.dst||'?'}</span>
+      </div>
+      ${!h.isScript?`<div class="orig-wrap" style="margin-bottom:4px"><div class="hist-orig" style="flex:1;margin:0">${esc(h.orig)}</div><button class="copy-btn sm" onclick="copyDirect(this,${JSON.stringify(h.orig)})">copiar original</button></div>`:''}
+      <div class="trans-wrap"><div class="hist-trans" style="flex:1">${esc(h.trans)}</div><button class="copy-btn sm" onclick="copyDirect(this,${JSON.stringify(h.trans)})">copiar</button></div>
+    </div>`).join('');
+}
+
+function updateStats(){
+  document.getElementById('st-total').textContent=history.length;
+  document.getElementById('st-words').textContent=history.reduce((a,h)=>a+(h.trans.split(/\s+/).length),0).toLocaleString();
+  document.getElementById('st-notion').textContent=notionSentCount.toLocaleString();
+}
+
+function clearFeed(){
+  document.getElementById('feed').innerHTML='<div class="empty" id="emp">Las traducciones y transcripciones aparecerán aquí.</div>';
+  document.getElementById('compact-feed').innerHTML='<div style="font-size:12px;color:#aaa;padding:1rem;text-align:center;">Las traducciones aparecerán aquí.</div>';
+}
+
+function clearHistory(){
+  if(!confirm('¿Borrar todo el historial local?'))return;
+  history=[];localStorage.removeItem('tl_hist2');renderHistory();
+}
+
+function exportHistory(){
+  if(!history.length){alert('No hay historial para exportar.');return;}
+  const lines=history.map(h=>`[${h.date} ${h.ts}] (${h.src}→${h.dst})\nOriginal: ${h.orig}\nTraducción: ${h.trans}\n`).join('\n---\n');
+  const blob=new Blob([lines],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='traducciones-'+new Date().toISOString().slice(0,10)+'.txt';
+  a.click();
+}
+
+function copyDirect(btn,text){
+  navigator.clipboard.writeText(text).then(()=>{
+    const orig=btn.textContent;btn.textContent='copiado';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},1800);
+  }).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    btn.textContent='copiado';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent=btn.textContent.includes('original')?'copiar original':'copiar';btn.classList.remove('copied');},1800);
+  });
+}
+
+function copyText(btn,ref){
+  const text=btn.getAttribute('data-src')||document.getElementById('tr-'+ref.replace('-tr','').replace('-orig',''))?.textContent||'';
+  navigator.clipboard.writeText(text).then(()=>{
+    const orig=btn.textContent;
+    btn.textContent='copiado';
+    btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},1800);
+  }).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    btn.textContent='copiado';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='copiar';btn.classList.remove('copied');},1800);
+  });
+}
+
+function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+loadConfig();renderHistory();updateStats();updateCLang();
+</script>
+</body>
+</html>
