@@ -414,9 +414,9 @@ async function process(text){
 
     const saveMode=document.getElementById('notion-save-mode').value;
     if(saveMode==='each'){
-      const ok=await sendToNotion(seg);
-      updateNotionBadge(id,ok);
-      if(ok){seg.notionSent=true;updateStats();}
+      const result=await sendToNotion(seg);
+      updateNotionBadge(id,result.ok);
+      if(result.ok){seg.notionSent=true;updateStats();}
     }
   }catch(e){
     const el=document.getElementById('tr-'+id);
@@ -455,9 +455,10 @@ async function sendToNotion(seg){
         body:JSON.stringify(payload)
       });
     }
-    if(r.ok){notionSentCount++;localStorage.setItem('tl_notion_count',notionSentCount);return true;}
-    return false;
-  }catch(e){return false;}
+    const respText = await r.text();
+    if(r.ok){notionSentCount++;localStorage.setItem('tl_notion_count',notionSentCount);return {ok:true};}
+    return {ok:false, status:r.status, body:respText};
+  }catch(e){return {ok:false, status:'network', body:e.message};}
 }
 
 function updateNotionBadge(segId,ok){
@@ -475,8 +476,8 @@ async function saveSessionToNotion(){
   setStatus('busy','Guardando en Notion...');
   let ok=0;
   for(const seg of unsent){
-    const sent=await sendToNotion(seg);
-    if(sent){seg.notionSent=true;ok++;}
+    const result=await sendToNotion(seg);
+    if(result.ok){seg.notionSent=true;ok++;}
   }
   setStatus('','Guardados '+ok+' de '+unsent.length+' segmentos en Notion.');
   updateStats();
@@ -490,8 +491,8 @@ async function saveAllToNotion(){
   setStatus('busy','Guardando historial en Notion...');
   let ok=0;
   for(const seg of unsent){
-    const sent=await sendToNotion(seg);
-    if(sent){seg.notionSent=true;ok++;}
+    const result=await sendToNotion(seg);
+    if(result.ok){seg.notionSent=true;ok++;}
   }
   localStorage.setItem('tl_hist2',JSON.stringify(history));
   setStatus('','Guardados '+ok+' registros en Notion.');
@@ -505,9 +506,9 @@ async function testNotion(){
   if(!token||!dbId){setNotionStatus('err','Completa el token y el ID de base de datos.');return;}
   setNotionStatus('busy','Probando conexión...');
   const testSeg={orig:'Prueba de conexión desde el Traductor',trans:'Connection test from Translator',src:'Spanish',dst:'English',date:new Date().toISOString().slice(0,10),ts:new Date().toLocaleTimeString(),isScript:false};
-  const ok=await sendToNotion(testSeg);
-  if(ok)setNotionStatus('ok','Conexión exitosa. Se creó una entrada de prueba en tu base de datos.');
-  else setNotionStatus('err','No se pudo conectar. Verifica el token, el ID y que la integración esté conectada a la base de datos.');
+  const result=await sendToNotion(testSeg);
+  if(result.ok)setNotionStatus('ok','Conexión exitosa. Se creó una entrada de prueba en tu base de datos.');
+  else setNotionStatus('err','Error '+result.status+': '+result.body.slice(0,200));
 }
 
 function setNotionStatus(type,msg){
